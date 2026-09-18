@@ -1,0 +1,152 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    color-scheme: light;
+  }
+
+  body {
+    background-color: #ffffff;
+    color: #0f172a;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    overflow-x: clip;
+    margin: 0;
+    padding: 0;
+  }
+}
+
+/* Antigravity 官网风格：纯白背景均匀分布精致黑点点阵 */
+.antigravity-dot-grid {
+  background-color: #ffffff;
+  background-image: radial-gradient(rgba(0, 0, 0, 0.16) 1.25px, transparent 1.25px);
+  background-size: 24px 24px;
+}
+
+/* Custom modern scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #070a12;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 9999px;
+  border: 2px solid #070a12;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+/* Glassmorphic utilities */
+.glass-panel {
+  background: rgba(18, 24, 38, 0.65);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5), inset 0 1px 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.3), inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-card:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.18);
+  transform: translateY(-2px);
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5), 0 0 20px 0 rgba(56, 189, 248, 0.08), inset 0 1px 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+.glass-nav {
+  background: rgba(9, 13, 22, 0.75);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Subtle glow animations */
+@keyframes pulse-slow {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.05); }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 8s ease-in-out infinite;
+}
+
+/* 肥皂泡泡彩虹薄膜干涉（Thin Film Interference / Soap Bubble Iridescence） */
+.soap-bubble-glass {
+  background:
+    /* 1. 顶部纯白月牙镜面高光 */
+    radial-gradient(130% 120% at 20% 0%, rgba(255, 255, 255, 0.78) 0%, rgba(255, 255, 255, 0.28) 45%, transparent 80%),
+    /* 2. 左上方反射的天空蔚蓝/晴空青色 (来自照片泡泡倒影) */
+    radial-gradient(85% 85% at 20% 25%, rgba(56, 189, 248, 0.24) 0%, transparent 65%),
+    /* 3. 右下缘与侧边的霓虹紫粉洋红薄膜干涉晕光 (来自照片亮边) */
+    radial-gradient(90% 90% at 82% 82%, rgba(244, 114, 182, 0.28) 0%, rgba(192, 132, 252, 0.2) 40%, transparent 75%),
+    /* 4. 局部微弱金黄折射微光 */
+    radial-gradient(60% 60% at 75% 15%, rgba(253, 230, 138, 0.16) 0%, transparent 60%),
+    /* 5. 底层微白透光基质 */
+    linear-gradient(135deg, rgba(255, 255, 255, 0.58) 0%, rgba(255, 255, 255, 0.32) 100%);
+  
+  backdrop-filter: blur(26px) saturate(210%) contrast(104%);
+  -webkit-backdrop-filter: blur(26px) saturate(210%) contrast(104%);
+  
+  /* 模拟肥皂泡极薄表皮的彩虹内辉光与微边框 */
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  box-shadow:
+    /* 肥皂泡边缘向外散发出的霓虹洋红与青天蓝光晕 */
+    0 16px 36px -4px rgba(236, 72, 153, 0.14),
+    0 8px 20px -4px rgba(56, 189, 248, 0.14),
+    0 4px 12px rgba(15, 23, 42, 0.04),
+    /* 内部镜面高光与薄膜色回光 */
+    inset 0 1.5px 2px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -1.5px 6px 0 rgba(244, 114, 182, 0.22),
+    inset 1.5px 0 8px 0 rgba(56, 189, 248, 0.2);
+}
+
+.soap-bubble-tip {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.6) 0%,
+    rgba(244, 114, 182, 0.25) 50%,
+    rgba(56, 189, 248, 0.22) 100%
+  );
+  backdrop-filter: blur(26px) saturate(210%);
+  -webkit-backdrop-filter: blur(26px) saturate(210%);
+  border-right: 1px solid rgba(255, 255, 255, 0.75);
+  border-bottom: 1px solid rgba(244, 114, 182, 0.45);
+}
+
+/* 浅色卡片内专属极细优雅滚动条 */
+.custom-scroll::-webkit-scrollbar {
+  width: 5px;
+}
+.custom-scroll::-webkit-scrollbar-track {
+  background: rgba(241, 245, 249, 0.6);
+  border-radius: 9999px;
+}
+.custom-scroll::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.4);
+  border-radius: 9999px;
+  border: none;
+}
+.custom-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(6, 182, 212, 0.7);
+}
+
+

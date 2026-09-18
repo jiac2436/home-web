@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>工程履历大画幅全景展示方案 Demo</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    .smooth-transition {
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    /* 专属极细优雅滚动条 */
+    .custom-scroll::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    .custom-scroll::-webkit-scrollbar-track {
+      background: rgba(241, 245, 249, 0.5);
+      border-radius: 9999px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.4);
+      border-radius: 9999px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb:hover {
+      background: rgba(6, 182, 212, 0.7);
+    }
+    /* 隐藏默认滚动条但保留滚动功能 */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    /* 竖排文字 */
+    .writing-vertical {
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
+    }
+  </style>
+</head>
+<body class="bg-[#f4f6f8] text-slate-900 font-sans min-h-screen antialiased selection:bg-cyan-500 selection:text-white p-3 sm:p-6 flex flex-col items-center">
+
+  <!-- 背景流光装饰 -->
+  <div class="fixed inset-0 pointer-events-none overflow-hidden z-0 opacity-60">
+    <svg class="absolute -top-20 -left-20 w-[1400px] h-[700px]" viewBox="0 0 1400 700" fill="none">
+      <path d="M-100,250 C300,50 700,500 1500,120" stroke="url(#ribbonGrad)" stroke-width="100" stroke-linecap="round" filter="blur(50px)" opacity="0.4"/>
+      <defs>
+        <linearGradient id="ribbonGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#38bdf8"/>
+          <stop offset="50%" stop-color="#06b6d4"/>
+          <stop offset="100%" stop-color="#818cf8"/>
+        </linearGradient>
+      </defs>
+    </svg>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- 顶部全局控制条：3 种突破小框的设计方案切换 & 中英语言切换 -->
+  <!-- ========================================================================= -->
+  <header class="relative z-30 w-full max-w-7xl mb-4 flex flex-col md:flex-row items-center justify-between gap-3 bg-white/90 backdrop-blur-xl p-3 sm:px-6 rounded-2xl border border-slate-200/90 shadow-sm">
+    <div class="flex items-center gap-3">
+      <div class="w-2.5 h-2.5 rounded-full bg-cyan-600 animate-pulse"></div>
+      <div>
+        <h1 class="text-sm font-black text-slate-900 tracking-wide flex items-center gap-2">
+          <span>工程履历大画幅重构体验</span>
+          <span class="text-[10px] font-mono text-cyan-700 bg-cyan-50 border border-cyan-200 px-2 py-0.5 rounded-full font-bold">
+            BREAK THE BOX
+          </span>
+        </h1>
+        <p class="text-[11px] text-slate-400 font-mono hidden sm:block">
+          彻底打破中央浮动小白盒的限制 · 10年6大战役从容排开 · 0处省略号截断
+        </p>
+      </div>
+    </div>
+
+    <!-- 方案切换 Tab 群 -->
+    <div class="flex flex-wrap items-center gap-2">
+      <div class="flex items-center gap-1 p-1 bg-slate-100 rounded-xl border border-slate-200/80 text-xs font-medium">
+        <button id="modeBtn1" onclick="switchSolution(1)" class="px-3 py-1.5 rounded-lg transition-all font-mono font-bold bg-white text-cyan-800 shadow-xs cursor-pointer">
+          方案 1：横向全景长卷 (推荐)
+        </button>
+        <button id="modeBtn2" onclick="switchSolution(2)" class="px-3 py-1.5 rounded-lg transition-all font-mono text-slate-600 hover:text-slate-900 cursor-pointer">
+          方案 2：左右分屏 Studio
+        </button>
+        <button id="modeBtn3" onclick="switchSolution(3)" class="px-3 py-1.5 rounded-lg transition-all font-mono text-slate-600 hover:text-slate-900 cursor-pointer">
+          方案 3：全宽折叠风琴墙
+        </button>
+      </div>
+
+      <!-- 语言切换 -->
+      <button onclick="toggleLang()" class="px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs font-mono font-bold text-slate-700 transition-all cursor-pointer">
+        <span id="langZh" class="text-cyan-600">中文</span> / <span id="langEn" class="text-slate-400">EN</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ========================================================================= -->
+  <!-- 核心展示区（全宽全画幅，给 6 大工程战役充足呼吸与舒展空间） -->
+  <!-- ========================================================================= -->
+  <main class="relative z-10 w-full max-w-7xl flex-1 flex flex-col justify-center min-h-[640px]">
+
+    <!-- ===================================================================== -->
+    <!-- 方案 1：横向时间轴全景长卷 (Horizontal Milestones Stream) -->
+    <!-- ===================================================================== -->
+    <section id="solution1" class="w-full flex flex-col gap-4">
+      <!-- 顶部发光时间轴导轨刻度 -->
+      <div class="bg-white/85 backdrop-blur-xl rounded-2xl border border-slate-200/90 p-4 shadow-sm">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-cyan-600"></span>
+            <span class="text-xs font-mono font-bold text-slate-900 uppercase tracking-wider" id="s1TrackLabel">
+              2015 — 2026+ 架构演进全景时间线
+            </span>
+            <span class="text-xs font-mono text-slate-400 hidden sm:inline" id="s1TrackDesc">
+              · 支持鼠标滚轮横向巡展，点击任意节点平滑聚焦对应战役
+            </span>
+          </div>
+          <span class="text-xs font-mono font-bold text-cyan-700 bg-cyan-50 px-2.5 py-0.5 rounded-full border border-cyan-200">
+            6 大核心战役 · 100% 完整展示
+          </span>
+        </div>
+
+        <!-- 时间节点进度刻度 -->
+        <div class="grid grid-cols-6 gap-2 pt-2 border-t border-slate-100">
+          <!-- 动态填充 6 个刻度按钮 -->
+          <div id="s1TimelineTicks" class="col-span-6 flex items-center justify-between relative">
+            <!-- 贯穿导轨线 -->
+            <div class="absolute left-4 right-4 top-1/2 -translate-y-1/2 h-[2px] bg-slate-200 -z-0"></div>
+            <!-- 由 JS 渲染 6 个刻度点 -->
+          </div>
+        </div>
+      </div>
+
+      <!-- 横向滚动卡片长卷 (支持滚轮直接横向平滑滚动) -->
+      <div 
+        id="s1HorizontalScroll" 
+        class="flex gap-5 overflow-x-auto py-2 pr-4 custom-scroll select-none scroll-smooth items-stretch"
+        style="min-height: 520px;"
+      >
+        <!-- 由 JS 填充 6 张大画幅展板 -->
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- 方案 2：视口级左右全开分屏 Studio (Full-Viewport Split Studio) -->
+    <!-- ===================================================================== -->
+    <section id="solution2" class="w-full hidden">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch bg-white/90 backdrop-blur-2xl rounded-3xl border border-slate-200/90 p-5 sm:p-7 shadow-[0_20px_60px_rgba(0,0,0,0.06)] min-h-[620px]">
+        
+        <!-- 左侧：通高垂直时间轴导轨 (占 4.5 列，高度充裕 560px+) -->
+        <div class="lg:col-span-5 flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-slate-100 pb-4 lg:pb-0 lg:pr-5">
+          <div>
+            <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-100">
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-cyan-600"></span>
+                <h3 class="text-sm font-black text-slate-900 font-mono uppercase" id="s2LeftTitle">
+                  工程战役全历程导轨
+                </h3>
+              </div>
+              <span class="text-xs font-mono text-slate-400">↕ 纵向从容滑动</span>
+            </div>
+          </div>
+
+          <!-- 6 个战役垂直列表（高度充足，卡片舒展，无截断） -->
+          <div id="s2VerticalList" class="flex-1 overflow-y-auto pr-2 space-y-3 custom-scroll max-h-[500px]">
+            <!-- 由 JS 填充 -->
+          </div>
+
+          <div class="pt-3 mt-3 border-t border-slate-100 text-[11px] font-mono text-slate-400 flex items-center justify-between">
+            <span id="s2FocusTip">当前聚焦：第 1 / 6 个核心阶段</span>
+            <span class="text-cyan-700 font-semibold">点击左侧切换右侧全貌</span>
+          </div>
+        </div>
+
+        <!-- 右侧：全尺寸架构战绩深度看板 (占 7.5 列，无需弹窗，全部铺开) -->
+        <div class="lg:col-span-7 flex flex-col justify-between" id="s2RightDashboard">
+          <!-- 由 JS 填充当前选中战役的豪华大看板 -->
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- 方案 3：全宽交互式折叠风琴墙 (Interactive Accordion Wall) -->
+    <!-- ===================================================================== -->
+    <section id="solution3" class="w-full hidden">
+      <div class="bg-white/90 backdrop-blur-2xl rounded-3xl border border-slate-200/90 p-5 sm:p-7 shadow-[0_20px_60px_rgba(0,0,0,0.06)] min-h-[620px] flex flex-col">
+        <!-- 顶部提示 -->
+        <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-cyan-600"></span>
+            <h3 class="text-sm font-black text-slate-900 font-mono uppercase" id="s3Title">
+              全景折叠风琴墙 · 6大工程战役弹性聚焦
+            </h3>
+          </div>
+          <span class="text-xs font-mono text-slate-400">
+            鼠标悬停或点击任意柱体平滑展开深度看板
+          </span>
+        </div>
+
+        <!-- 6 扇并列展开的风琴容器 -->
+        <div id="s3AccordionContainer" class="flex-1 flex gap-3 min-h-[520px] items-stretch overflow-hidden">
+          <!-- 由 JS 填充 6 扇弹性伸缩面板 -->
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ========================================================================= -->
+  <!-- 底部设计方案对比与调研指引 -->
+  <!-- ========================================================================= -->
+  <footer class="relative z-30 w-full max-w-7xl mt-5 bg-white/80 backdrop-blur-xl p-4 sm:px-6 rounded-2xl border border-slate-200/90 text-xs font-mono text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs">
+    <div class="flex items-center gap-2">
+      <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+      <span id="footerDesc">
+        方案对比：方案 1 最契合横向跑道长河；方案 2 信息密度最高且最显专业深度；方案 3 极富高科技交互感。
+      </span>
+    </div>
+    <div class="text-cyan-800 font-bold">
+      无需委曲求全于小白盒 · 释放 10 年架构沉淀
+    </div>
+  </footer>
+
+  <!-- ========================================================================= -->
+  <!-- 数据层与交互控制器 -->
+  <!-- ========================================================================= -->
+  <script>
+    // 真实简历全量 6 大项目数据 (中英双语)
+    const PROJECTS = [
+      {
+        id: 'qimengdao-ecommerce',
+        code: '01',
+        period: { zh: '2023.03 — 至今', en: '2023.03 — Present' },
+        company: { zh: '北京奇梦岛网络科技', en: 'Beijing Qimengdao Network' },
+        fullName: { zh: '北京奇梦岛网络科技有限公司', en: 'Beijing Qimengdao Network Tech Co., Ltd.' },
+        title: { zh: '潮玩电商订单与秒杀系统（高并发核心项目）', en: 'Trending Toy E-Commerce Flash-Sale & Order Engine' },
+        role: { zh: '高级 Java 开发工程师 · 核心架构', en: 'Senior Java Software Engineer · Tech Lead' },
+        domainTag: { zh: '高并发秒杀 · 三级缓存 · 削峰防超卖', en: 'High-Concurrency Flash-Sale · 3-Tier Cache · Zero-Overselling' },
+        timelineBadge: { zh: '秒杀交易', en: 'Flash-Sale' },
+        location: { zh: '北京 · 电商交易中枢', en: 'Beijing · Commerce Core' },
+        slogan: {
+          zh: '以三级多级缓存与原子预扣减为防线，彻底解决秒杀超卖与数据库瞬时雪崩，保障千万级日销峰值如丝般顺滑',
+          en: 'Shielding transactional integrity with 3-tier caching and atomic inventory pre-deduction under massive drops'
+        },
+        metrics: [
+          { val: '+45%', lbl: { zh: '下单 QPS 提升', en: 'Order QPS Boost' }, desc: { zh: '从 110 提升至 160，抗住数万脉冲', en: 'Elevated from 110 to 160 QPS' } },
+          { val: { zh: '10 万+', en: '100k+' }, lbl: { zh: '单日新品订单', en: 'Daily Drop Orders' }, desc: { zh: '秒杀全周期零宕机、零超卖', en: 'Zero overselling & zero downtime' } },
+          { val: '-70%', lbl: { zh: '数据库回源流量', en: 'DB Read Storm Cut' }, desc: { zh: '热点商品提前预热与本地缓存阻断', en: 'Hot item pre-warming & cache shields' } },
+          { val: '< 50ms', lbl: { zh: '接口 TP99 延迟', en: 'TP99 Latency' }, desc: { zh: '全链路压测与关键链路异步化', en: 'Optimized critical checkout path' } }
+        ],
+        deepChapters: [
+          {
+            title: { zh: '1. 本地缓存+Redis+DB 三级多级缓存防穿透架构', en: '1. Multi-Tier Cache Hierarchy (Caffeine + Redis + DB)' },
+            desc: {
+              zh: '针对秒杀瞬间几十万人抢购数万盲盒库存造成的瞬时打穿问题，构建“Caffeine 本地热点缓存 + Redis Cluster 读写分离集群 + MySQL 底层保障”三级多级缓存架构，热点读请求 99% 在应用层就地阻断。',
+              en: 'Engineered a 3-tier cache hierarchy intercepting 99% of hot read storms at the application layer, completely shielding MySQL databases from flash drops.'
+            }
+          },
+          {
+            title: { zh: '2. Redis Lua 原子预扣减与异步流水号最终对账', en: '2. Atomic Inventory Pre-Deduction via Redis Lua' },
+            desc: {
+              zh: '弃用低效的行锁机制，改用 Redis 执行 Lua 脚本完成库存原子判定与预扣减，并生成唯一流水号推送至 RocketMQ 削峰异步落库。配套设计异步回滚与最终对账补偿任务，达成大促峰值零超卖、零宕机。',
+              en: 'Replaced row locks with Redis Lua scripts for atomic pre-deductions, using RocketMQ queues for asynchronous order persistence with zero overselling.'
+            }
+          }
+        ],
+        techStack: ['Java 11', 'SpringBoot', 'Dubbo', 'Redis 集群', 'RocketMQ', 'MySQL', 'Caffeine', 'Docker', 'K8s']
+      },
+      {
+        id: 'qimengdao-ai-crm',
+        code: '02',
+        period: { zh: '2022.07 — 2023.12', en: '2022.07 — 2023.12' },
+        company: { zh: '北京奇梦岛网络科技', en: 'Beijing Qimengdao Network' },
+        fullName: { zh: '北京奇梦岛网络科技有限公司', en: 'Beijing Qimengdao Network Tech Co., Ltd.' },
+        title: { zh: '企业级 CRM 业务中台与生产级 AI Agent 智能销售平台', en: 'Enterprise CRM Platform & Production AI Agent Sales SOP' },
+        role: { zh: '高级工程师 · 项目技术负责人 / 全栈架构', en: 'Senior Engineer · Project Tech Lead / Full-Stack Architect' },
+        domainTag: { zh: '生产级 AI 智能体 · 12个独立微服务 · 工作流定制', en: 'AI Agent SOP · 12 Domain Microservices · Flowable 6' },
+        timelineBadge: { zh: 'AI Agent', en: 'AI Agent' },
+        location: { zh: '北京 · 智能中台研发部', en: 'Beijing · AI Platform Dept' },
+        slogan: {
+          zh: '以 Memory/Planning/Tools 智能体架构与微服务治理赋能企业级复杂销售交付全流程，打造高人效生产力中枢',
+          en: 'Fusing Agentic AI (Memory/Planning/Tools) with microservices to supercharge enterprise sales workflows'
+        },
+        metrics: [
+          { val: '300%', lbl: { zh: '销售人效突破', en: 'Sales Velocity Growth' }, desc: { zh: 'AI Agent 自动承接 80% 常见跟进流转', en: 'AI SOP covers 80% of sales scenarios' } },
+          { val: { zh: '12 个', en: '12 Services' }, lbl: { zh: '独立业务微服务', en: 'Domain Microservices' }, desc: { zh: '单体解耦，系统耦合度降低 60%', en: 'Decoupled monolithic bottlenecks' } },
+          { val: '10x', lbl: { zh: 'CI/CD 部署提速', en: 'Deployment Speedup' }, desc: { zh: '容器化流水线，发版周期压缩至 2 小时', en: 'Release cycles reduced from 2d to 2h' } },
+          { val: '+15%', lbl: { zh: '客户付费转化率', en: 'Conversion Surge' }, desc: { zh: '线索精准分发与自动化首触达', en: 'Precision routing & timely engagement' } }
+        ],
+        deepChapters: [
+          {
+            title: { zh: '1. AI Agent 核心架构：Memory + Planning + Tools 自动化落地', en: '1. AI Agent Architecture: Memory + Planning + Tools' },
+            desc: {
+              zh: '基于企业私域销售场景设计智能体中枢：利用 Memory 模块记录学员过往沟通喜好与画像标签；Planning 模块根据课程进度智能拆解触达任务计划；Tools 模块调度外部网关自动触发短信、语音呼叫及 CRM 回写，自动化覆盖 80% 机械性跟进工作。',
+              en: 'Constructed an autonomous Agent engine integrating Memory for user interaction history, Planning for schedule breakdown, and Tools for multi-channel outreach.'
+            }
+          },
+          {
+            title: { zh: '2. 核心单体系统向 12 个独立业务微服务拆分治理', en: '2. Monolith Decoupling into 12 Microservices' },
+            desc: {
+              zh: '面对旧单体系统日益严重的耦合瓶颈，结合 DDD 领域驱动设计思想，将 CRM 划分为客户线索、公海池、呼叫中枢、订单财务等 12 个高内聚独立微服务，并搭建容器化 CI/CD 流水线，发版周期由 2 天缩短至 2 小时。',
+              en: 'Led domain-driven refactoring from monolith into 12 domain microservices with containerized CI/CD pipelines, reducing turnaround from 2 days to 2 hours.'
+            }
+          }
+        ],
+        techStack: ['Spring Boot', 'Spring Cloud', 'Flowable 6', 'AI Agent', 'Docker', 'K8s', 'Redis', 'MySQL']
+      },
+      {
+        id: 'renyimen-ad-platform',
+        code: '03',
+        period: { zh: '2021.05 — 2022.05', en: '2021.05 — 2022.05' },
+        company: { zh: '上海任意门科技', en: 'Shanghai Renyimen Tech' },
+        fullName: { zh: '上海任意门科技有限公司（Soul App）', en: 'Shanghai Renyimen Tech Co., Ltd. (Soul App)' },
+        title: { zh: '商业化广告中台、CRM 与财务结算体系从 0 到 1 建设', en: 'Commercial Ad-Tech Middle Platform, CRM & Billing Ledger' },
+        role: { zh: '高级 Java 开发工程师', en: 'Senior Java Software Engineer' },
+        domainTag: { zh: '广告商业化 · 复杂台账 · 动态工作流', en: 'Commercial Ad-Tech · Financial Ledger · Dynamic Workflows' },
+        timelineBadge: { zh: '商业中台', en: 'Ad Platform' },
+        location: { zh: '上海 · 商业化研发部', en: 'Shanghai · Commercial Tech Dept' },
+        slogan: {
+          zh: '在高速增长的商业化广告脉络中，以严谨的数据一致性与高度可复用的中台组件为底层营收保驾护航',
+          en: 'Establishing financial consistency and scalable workflows for commercial ad revenue pipelines'
+        },
+        metrics: [
+          { val: '0 → 1', lbl: { zh: '核心系统架构', en: 'End-to-End Build' }, desc: { zh: '广告 CRM、财务台账与工作流中台', en: 'Ad CRM, Billing Ledger & Flowable' } },
+          { val: '+30%', lbl: { zh: '研发效能提升', en: 'Velocity Growth' }, desc: { zh: '沉淀广告组件库与通用脚手架', en: 'Standard ad libraries & scaffolding' } },
+          { val: 'Grade-A', lbl: { zh: '连续 3 季度绩效', en: 'Performance Rating' }, desc: { zh: '因架构严谨与攻坚成果荣获部门顶格评定', en: 'Top department performance honors' } },
+          { val: { zh: '10+ 篇', en: '10+ Papers' }, lbl: { zh: '技术沉淀内刊', en: 'Whitepapers' }, desc: { zh: '主讲内部 JVM 调优与并发实战分享', en: 'Led workshops on JVM & distributed locks' } }
+        ],
+        deepChapters: [
+          {
+            title: { zh: '1. 广告业务复杂结算与财务严谨对账体系', en: '1. Multi-Tier Ad Billing & Audit Reconciliation' },
+            desc: {
+              zh: '广告业务数据流转复杂，涵盖客户合同、投放扣费、阶梯返点结算、发票审计等关键链路，对金额精度与事务隔离级别要求苛刻；通过分布式事务一致性机制与定时对账补偿，保障数千万元投放流水账目零差错。',
+              en: 'Architected distributed reconciliation pipelines for ad contracts, rebates, and billing audits, ensuring absolute precision across millions in advertising GMV.'
+            }
+          }
+        ],
+        techStack: ['Java 11', 'Spring Cloud', 'Flowable', 'MyBatis-Plus', 'Redis', 'MySQL', 'GitLab CI']
+      },
+      {
+        id: 'meicai-flash-sale',
+        code: '04',
+        period: { zh: '2018.11 — 2021.05', en: '2018.11 — 2021.05' },
+        company: { zh: '美菜网（美家优享）', en: 'Meicai (Meijia Youxiang)' },
+        fullName: { zh: '北京美菜网科技有限公司（美家优享社区团购）', en: 'Meicai Network Tech Co., Ltd.' },
+        title: { zh: '生鲜社区秒杀与动态价格中枢（千万级日销交易系统）', en: 'Community Grocery Pricing & Flash-Sale Transaction Engine' },
+        role: { zh: '高级 Java 开发工程师 · 核心交易研发', en: 'Senior Java Software Engineer · Commerce Core' },
+        domainTag: { zh: '社区生鲜秒杀 · 千万级流水 · 动态定价', en: 'Community Flash-Sale · Multi-Million GMV · Dynamic Pricing' },
+        timelineBadge: { zh: '生鲜秒杀', en: 'Community Commerce' },
+        location: { zh: '北京 · 社区团购事业部', en: 'Beijing · Community Commerce Div' },
+        slogan: {
+          zh: '在全国生鲜社区秒杀的脉冲洪峰中，以精细的多级缓存分层与高并发防重设计确保千万级流水零超卖',
+          en: 'Anchoring high-concurrency community grocery flash sales with robust caching and inventory locks'
+        },
+        metrics: [
+          { val: '130k+', lbl: { zh: '全国社区团长', en: 'Group Leaders' }, desc: { zh: '赋能百万级下沉生鲜家庭日常采购', en: 'Serving millions of households daily' } },
+          { val: '350k', lbl: { zh: '单日大促峰值单', en: 'Peak Daily Orders' }, desc: { zh: '千万日销平稳履约，零宕机事故', en: 'Multi-million daily GMV settlement' } },
+          { val: '0', lbl: { zh: '重大超卖故障', en: 'Overselling Incidents' }, desc: { zh: '多层库存原子预扣与补偿校验', en: 'Atomic pre-deduction with reconciliation' } },
+          { val: '-65%', lbl: { zh: '数据库瞬时压力', en: 'DB Load Cut' }, desc: { zh: '多层缓存拦截高频热点穿透', en: 'Multi-layer cache shields absorbing traffic' } }
+        ],
+        deepChapters: [
+          {
+            title: { zh: '1. 千万级高并发秒杀库存防超卖设计', en: '1. Flash-Sale Atomic Inventory Locks & Anti-Overselling' },
+            desc: {
+              zh: '生鲜特价秒杀活动并发极高且库存极度敏感；采用 Redis Lua 脚本实现原子递减校验，配合分布式延迟队列与流水号幂等机制，做到高并发下毫秒级扣减并杜绝库存超卖与重单。',
+              en: 'Engineered Redis Lua atomic scripts and distributed idempotency tokens, preventing overselling under massive checkout bursts.'
+            }
+          }
+        ],
+        techStack: ['Java 8', 'Spring Boot', 'Spring Cloud', 'Redis', 'RocketMQ', 'MySQL', 'XXL-JOB']
+      },
+      {
+        id: 'zhiheishu-cms',
+        code: '05',
+        period: { zh: '2017.03 — 2018.10', en: '2017.03 — 2018.10' },
+        company: { zh: '环宇万维（智慧树）', en: 'Huanyu Wanwei (Zhihuishu)' },
+        fullName: { zh: '北京环宇万维科技有限公司（智慧树幼教云平台）', en: 'Beijing Huanyu Wanwei Tech Co., Ltd. (Zhihuishu)' },
+        title: { zh: '智慧树幼教云平台核心 CMS 与微服务治理', en: 'Zhihuishu Early-Education Cloud CMS & Microservices' },
+        role: { zh: 'Java 后端开发工程师 · 核心业务研发', en: 'Java Backend Software Engineer · Core Tech' },
+        domainTag: { zh: '幼教互动平台 · 高频内容聚合 · 微服务拆分', en: 'Early Education CMS · High-Traffic Feed · Microservices' },
+        timelineBadge: { zh: '教育互联', en: 'CMS / Edu' },
+        location: { zh: '北京 · 幼教业务线', en: 'Beijing · Edu Cloud Team' },
+        slogan: {
+          zh: '以敏捷微服务治理与精细缓存设计支撑全国数百万幼教家庭的高频内容互动与任务打卡',
+          en: 'Powering high-frequency educational CMS interactions for millions of families with Dubbo'
+        },
+        metrics: [
+          { val: '-50%', lbl: { zh: '接口响应耗时', en: 'Latency Reduction' }, desc: { zh: '慢 SQL 治理与全链路性能调优', en: 'Slow SQL tuning & cache layers' } },
+          { val: '99.9%', lbl: { zh: '系统可用性', en: 'System Uptime' }, desc: { zh: 'Dubbo 熔断限流与服务解耦', en: 'Circuit breaking & decoupling' } },
+          { val: { zh: '百万级', en: '1M+' }, lbl: { zh: '日均活跃师生', en: 'Active Users' }, desc: { zh: '支撑幼教家庭高频图文视频互动', en: 'Smooth content & task feeds' } },
+          { val: { zh: '0 故障', en: '0 Fault' }, lbl: { zh: '大促开学季保障', en: 'Zero Incidents' }, desc: { zh: '开学季流量激增平稳应对', en: 'High resilience during seasonal peaks' } }
+        ],
+        deepChapters: [
+          {
+            title: { zh: '1. CMS 内容发布与高频读聚合微服务治理', en: '1. Content Feed Aggregation & Dubbo Optimization' },
+            desc: {
+              zh: '针对智慧树家长端与教师端高频图文、视频资讯及亲子任务打卡场景，基于 Dubbo 拆解服务边界，引入多级 Redis 缓存避免热点内容穿透，接口平均耗时由 120ms 降至 50ms。',
+              en: 'Decoupled content publishing from user social feeds with Dubbo RPC and Redis caching, cutting average feed latency from 120ms to 50ms.'
+            }
+          }
+        ],
+        techStack: ['Java 8', 'Dubbo', 'Spring', 'Redis', 'MySQL', 'Maven', 'Linux']
+      },
+      {
+        id: 'piaowutong',
+        code: '06',
+        period: { zh: '2015.08 — 2017.03', en: '2015.08 — 2017.03' },
+        company: { zh: '中演票务通', en: 'China Ticket Online' },
+        fullName: { zh: '中演票务通（全国演出票务在线）', en: 'China Ticket Online Ticketing Platform' },
+        title: { zh: '票务通主站高可用架构重构与移动 API 中枢', en: 'Ticketing Platform High-Availability Architecture & Mobile API' },
+        role: { zh: 'Java 开发工程师 · API 项目负责人', en: 'Java Engineer · API Lead' },
+        domainTag: { zh: '演出票务秒杀 · SpringMVC+Dubbo 重构 · API 规范', en: 'Ticketing Flash Sales · SpringMVC+Dubbo · API Protocols' },
+        timelineBadge: { zh: '高可用重构', en: 'Ticketing Core' },
+        location: { zh: '北京 · 核心售票研发组', en: 'Beijing · Core Ticketing Team' },
+        slogan: {
+          zh: '在全国热门大型演出开售瞬间，以重构解耦与标准化接口契约筑牢抢票高可用基石',
+          en: 'Rebuilding ticketing transaction backends with Dubbo to handle high-demand concert ticket rushes'
+        },
+        metrics: [
+          { val: '+40%', lbl: { zh: '系统稳定性提升', en: 'Stability Increase' }, desc: { zh: 'SpringMVC + Dubbo 架构重构解耦', en: 'SpringMVC + Dubbo refactoring' } },
+          { val: '+35%', lbl: { zh: '联调交付效率', en: 'Integration Velocity' }, desc: { zh: '标准化 API 契约与 Mock 规范', en: 'Standardized API contracts' } },
+          { val: { zh: '千万级', en: '10M+' }, lbl: { zh: '演出开售吞吐', en: 'Peak Ticket Volume' }, desc: { zh: '支撑全国热门演唱会与赛事平稳放票', en: 'Nationwide concert ticket sales' } },
+          { val: { zh: '0 错票', en: '0 Errors' }, lbl: { zh: '票务库存一致性', en: 'Zero Ticketing Errors' }, desc: { zh: '排队锁座与支付防重扣款', en: 'Seat reservation & payment checks' } }
+        ],
+        deepChapters: [
+          {
+            title: { zh: '1. 单体架构向 SpringMVC + Dubbo 微服务化演进', en: '1. Decoupling Monolithic Ticketing into Distributed RPC' },
+            desc: {
+              zh: '针对热门演唱会开售时大量刷票导致的单体服务假死问题，主导将用户鉴权、演出场次、选座锁座及支付接口按业务拆分为独立 Dubbo 服务，整体吞吐与稳定性提升 40%。',
+              en: 'Decoupled monolithic ticketing into distinct services via Dubbo, preventing server stalls during concert ticket release spikes.'
+            }
+          }
+        ],
+        techStack: ['Java 7/8', 'SpringMVC', 'Dubbo', 'Oracle', 'Redis', 'Tomcat', 'Nginx']
+      }
+    ];
+
+    // 全局状态
+    let currentSolution = 1;
+    let currentLang = 'zh';
+    let s1ActiveIdx = 0;
+    let s2ActiveIdx = 0;
+    let s3ActiveIdx = 0;
+
+    function getVal(v) {
+      if (typeof v === 'object') {
+        return v[currentLang] || v.zh;
+      }
+      return v;
+    }
+
+    // 切换方案
+    function switchSolution(num) {
+      currentSolution = num;
+      document.getElementById('solution1').classList.toggle('hidden', num !== 1);
+      document.getElementById('solution2').classList.toggle('hidden', num !== 2);
+      document.getElementById('solution3').classList.toggle('hidden', num !== 3);
+
+      for (let i = 1; i <= 3; i++) {
+        const btn = document.getElementById(`modeBtn${i}`);
+        if (i === num) {
+          btn.className = "px-3 py-1.5 rounded-lg transition-all font-mono font-bold bg-white text-cyan-800 shadow-xs cursor-pointer";
+        } else {
+          btn.className = "px-3 py-1.5 rounded-lg transition-all font-mono text-slate-600 hover:text-slate-900 cursor-pointer";
+        }
+      }
+
+      renderAll();
+    }
+
+    // 切换语言
+    function toggleLang() {
+      currentLang = currentLang === 'zh' ? 'en' : 'zh';
+      document.getElementById('langZh').className = currentLang === 'zh' ? 'text-cyan-600 font-bold' : 'text-slate-400';
+      document.getElementById('langEn').className = currentLang === 'en' ? 'text-cyan-600 font-bold' : 'text-slate-400';
+      renderAll();
+    }
+
+    // =========================================================================
+    // 渲染方案 1：横向全景长卷 (Horizontal Milestones Stream)
+    // =========================================================================
+    function renderSolution1() {
+      const ticksContainer = document.getElementById('s1TimelineTicks');
+      const streamContainer = document.getElementById('s1HorizontalScroll');
+
+      // 1. 渲染顶部刻度
+      ticksContainer.innerHTML = `
+        <div class="absolute left-4 right-4 top-1/2 -translate-y-1/2 h-[2px] bg-slate-200 -z-0"></div>
+        ${PROJECTS.map((p, idx) => {
+          const isActive = s1ActiveIdx === idx;
+          return `
+            <button 
+              onclick="focusS1Project(${idx})"
+              class="relative z-10 flex flex-col items-center group cursor-pointer"
+            >
+              <div class="w-7 h-7 rounded-full flex items-center justify-center transition-all ${
+                isActive ? 'bg-cyan-600 text-white ring-4 ring-cyan-100 shadow-sm scale-110' : 'bg-white border-2 border-slate-300 text-slate-500 group-hover:border-cyan-500'
+              }">
+                <span class="text-[10px] font-mono font-bold">${p.code}</span>
+              </div>
+              <span class="text-[11px] font-mono font-bold mt-1.5 whitespace-nowrap ${isActive ? 'text-cyan-800 font-black' : 'text-slate-500'}">
+                ${p.period[currentLang]}
+              </span>
+              <span class="text-[10px] font-mono text-slate-400 hidden md:block">
+                ${p.company[currentLang]}
+              </span>
+            </button>
+          `;
+        }).join('')}
+      `;
+
+      // 2. 渲染横向大画幅长卷展板
+      streamContainer.innerHTML = PROJECTS.map((p, idx) => {
+        const isActive = s1ActiveIdx === idx;
+        return `
+          <div 
+            id="s1Card_${idx}"
+            onclick="focusS1Project(${idx})"
+            class="flex-shrink-0 w-[520px] sm:w-[580px] bg-white/95 backdrop-blur-2xl rounded-3xl border transition-all duration-300 p-6 sm:p-7 flex flex-col justify-between cursor-pointer ${
+              isActive ? 'border-cyan-500 ring-2 ring-cyan-200/80 shadow-[0_20px_50px_rgba(6,182,212,0.12)]' : 'border-slate-200/90 hover:border-slate-300 shadow-sm'
+            }"
+          >
+            <div>
+              <!-- 顶部阶段标签 + 领域徽标 -->
+              <div class="flex items-center justify-between gap-2 pb-3 mb-3 border-b border-slate-100 text-xs font-mono">
+                <div class="flex items-center gap-2">
+                  <span class="w-2.5 h-2.5 rounded-full ${isActive ? 'bg-cyan-600' : 'bg-slate-400'}"></span>
+                  <span class="font-black text-slate-900 uppercase">MILESTONE // ${p.code}</span>
+                  <span class="text-cyan-800 bg-cyan-50 border border-cyan-200 px-2 py-0.5 rounded-full font-bold">
+                    ${p.timelineBadge[currentLang]}
+                  </span>
+                </div>
+                <span class="text-cyan-700 font-extrabold bg-slate-100 px-2.5 py-0.5 rounded-md">
+                  ${p.period[currentLang]}
+                </span>
+              </div>
+
+              <!-- 项目大标题 (100% 完整展示，绝无截断！) -->
+              <h2 class="text-lg sm:text-xl font-black text-slate-950 leading-snug mb-1">
+                ${p.title[currentLang]}
+              </h2>
+              <div class="flex flex-wrap items-center gap-2 text-xs font-mono text-slate-500 mb-4">
+                <span class="font-bold text-slate-700">${p.fullName[currentLang]}</span>
+                <span>•</span>
+                <span class="text-cyan-700 font-semibold">${p.role[currentLang]}</span>
+                <span>•</span>
+                <span>${p.location[currentLang]}</span>
+              </div>
+
+              <!-- 核心战役使命 -->
+              <div class="p-3.5 rounded-2xl bg-cyan-50/70 border border-cyan-200/70 text-cyan-950 text-xs sm:text-sm font-medium leading-relaxed mb-4">
+                <span class="font-bold font-mono text-[10px] block text-cyan-700 uppercase mb-0.5">
+                  ${currentLang === 'zh' ? '【核心工程战役使命】' : '【KEY ARCHITECTURE MISSION】'}
+                </span>
+                ${p.slogan[currentLang]}
+              </div>
+
+              <!-- 4 大核心量化战绩 (大字号，震撼展示) -->
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+                ${p.metrics.map(m => `
+                  <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
+                    <div class="text-xl sm:text-2xl font-black font-mono text-cyan-700 leading-none mb-1">
+                      ${getVal(m.val)}
+                    </div>
+                    <div class="text-[10px] font-mono font-bold text-slate-800 uppercase">
+                      ${m.lbl[currentLang]}
+                    </div>
+                    <div class="text-[9px] text-slate-500 mt-1 leading-tight">
+                      ${m.desc[currentLang]}
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+
+              <!-- 架构攻坚拆解预览 -->
+              <div class="space-y-2 mb-4">
+                ${p.deepChapters.map(ch => `
+                  <div class="p-2.5 rounded-xl bg-slate-50/80 border border-slate-150 text-xs">
+                    <h4 class="font-bold text-slate-900 font-mono flex items-center gap-1.5 mb-1">
+                      <span class="w-1.5 h-1.5 rounded-full bg-cyan-500"></span>
+                      ${ch.title[currentLang]}
+                    </h4>
+                    <p class="text-slate-600 text-[11px] leading-relaxed pl-3 border-l border-slate-200">
+                      ${ch.desc[currentLang]}
+                    </p>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+
+            <!-- 底部技术栈芯片群 (完整呈现) -->
+            <div class="pt-3 border-t border-slate-100 flex flex-wrap gap-1.5 items-center">
+              <span class="text-[10px] font-mono font-bold uppercase text-slate-400 mr-1">STACK:</span>
+              ${p.techStack.map(t => `
+                <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold bg-slate-900 text-white">
+                  ${t}
+                </span>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // 监听垂直滚轮事件并将其平滑转化为横向滚动
+      streamContainer.onwheel = (e) => {
+        if (e.deltaY !== 0) {
+          e.preventDefault();
+          streamContainer.scrollLeft += e.deltaY * 1.5;
+        }
+      };
+    }
+
+    function focusS1Project(idx) {
+      s1ActiveIdx = idx;
+      renderSolution1();
+      const cardEl = document.getElementById(`s1Card_${idx}`);
+      if (cardEl) {
+        cardEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      }
+    }
+
+    // =========================================================================
+    // 渲染方案 2：视口级左右全开 Studio (Full-Viewport Split Studio)
+    // =========================================================================
+    function renderSolution2() {
+      const listContainer = document.getElementById('s2VerticalList');
+      const rightDashboard = document.getElementById('s2RightDashboard');
+      const activeProject = PROJECTS[s2ActiveIdx];
+
+      document.getElementById('s2FocusTip').innerText = currentLang === 'zh'
+        ? `当前聚焦：第 ${s2ActiveIdx + 1} / 6 个核心阶段`
+        : `Focused: ${s2ActiveIdx + 1} of 6 milestones`;
+
+      // 1. 左侧垂直导轨（每张卡片高度充足，项目名称完全展示，无截断）
+      listContainer.innerHTML = PROJECTS.map((p, idx) => {
+        const isActive = s2ActiveIdx === idx;
+        const isLast = idx === PROJECTS.length - 1;
+        return `
+          <div 
+            onclick="focusS2Project(${idx})"
+            class="group cursor-pointer p-3 rounded-2xl border transition-all duration-200 ${
+              isActive ? 'bg-cyan-50/80 border-cyan-400 shadow-xs' : 'bg-white/80 border-slate-200/80 hover:bg-slate-50'
+            }"
+          >
+            <!-- 时间与徽标 -->
+            <div class="flex items-center justify-between text-xs font-mono mb-1">
+              <span class="font-extrabold ${isActive ? 'text-cyan-800' : 'text-slate-700'}">
+                ${p.period[currentLang]}
+              </span>
+              <span class="text-[10px] ${isActive ? 'text-cyan-700 bg-cyan-100/80' : 'text-slate-500 bg-slate-100'} px-2 py-0.2 rounded font-bold">
+                ${p.timelineBadge[currentLang]}
+              </span>
+            </div>
+
+            <!-- 项目全称 (完整展示，绝不截断！) -->
+            <h4 class="text-xs sm:text-sm font-bold leading-snug ${isActive ? 'text-slate-950 font-black' : 'text-slate-800 group-hover:text-slate-950'}">
+              ${p.title[currentLang]}
+            </h4>
+
+            <p class="text-[11px] font-mono text-slate-500 mt-1">
+              ${p.company[currentLang]} · ${p.role[currentLang]}
+            </p>
+          </div>
+        `;
+      }).join('');
+
+      // 2. 右侧全尺寸大看板（全部展开，信息量极度丰富，无折叠感）
+      rightDashboard.innerHTML = `
+        <div class="space-y-4">
+          <!-- 顶栏元信息 -->
+          <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-mono font-bold text-cyan-800 bg-cyan-50 border border-cyan-200 px-2.5 py-0.5 rounded-full uppercase">
+                ${activeProject.domainTag[currentLang]}
+              </span>
+              <span class="text-xs font-mono text-slate-400">${activeProject.location[currentLang]}</span>
+            </div>
+            <span class="text-xs font-mono font-black text-cyan-700 bg-slate-100 px-2.5 py-0.5 rounded">
+              STAGE // ${activeProject.code} · ${activeProject.period[currentLang]}
+            </span>
+          </div>
+
+          <!-- 项目超大标题与公司全称 -->
+          <div>
+            <h2 class="text-xl sm:text-2xl font-black text-slate-950 tracking-tight leading-snug">
+              ${activeProject.title[currentLang]}
+            </h2>
+            <p class="text-xs sm:text-sm font-mono text-slate-500 mt-1">
+              ${activeProject.fullName[currentLang]} · ${activeProject.role[currentLang]}
+            </p>
+          </div>
+
+          <!-- 核心战役口号 -->
+          <div class="p-3.5 rounded-2xl bg-cyan-50/70 border border-cyan-200/70 text-cyan-950 text-xs sm:text-sm font-medium leading-relaxed">
+            <span class="font-bold font-mono text-xs block text-cyan-700 uppercase mb-0.5">
+              ${currentLang === 'zh' ? '【核心工程战役使命】' : '【KEY ARCHITECTURE MISSION】'}
+            </span>
+            ${activeProject.slogan[currentLang]}
+          </div>
+
+          <!-- 4 项核心战绩看板 (大字号) -->
+          <div>
+            <h3 class="text-xs font-mono font-bold uppercase tracking-wider text-slate-400 mb-2">
+              ${currentLang === 'zh' ? '核心量化战绩指标 / KEY METRICS' : 'KEY METRICS & IMPACT'}
+            </h3>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              ${activeProject.metrics.map(m => `
+                <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200/80">
+                  <div class="text-2xl font-black font-mono text-cyan-700 mb-0.5">${getVal(m.val)}</div>
+                  <div class="text-[11px] font-mono font-bold text-slate-800 uppercase">${m.lbl[currentLang]}</div>
+                  <div class="text-[10px] text-slate-500 mt-1 leading-tight">${m.desc[currentLang]}</div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+
+          <!-- 深度架构攻坚章节直接展开 -->
+          <div>
+            <h3 class="text-xs font-mono font-bold uppercase tracking-wider text-slate-400 mb-2">
+              ${currentLang === 'zh' ? '深度架构拆解 / ARCHITECTURAL DEEP-DIVES' : 'ARCHITECTURAL DEEP-DIVES'}
+            </h3>
+            <div class="space-y-2">
+              ${activeProject.deepChapters.map(ch => `
+                <div class="p-3 rounded-2xl bg-slate-50/80 border border-slate-200/80">
+                  <h4 class="text-xs sm:text-sm font-bold text-slate-900 font-mono flex items-center gap-2 mb-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-cyan-500"></span>
+                    ${ch.title[currentLang]}
+                  </h4>
+                  <p class="text-xs text-slate-600 leading-relaxed pl-3.5 border-l border-slate-200">
+                    ${ch.desc[currentLang]}
+                  </p>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+
+          <!-- 技术栈沉淀 -->
+          <div class="pt-3 border-t border-slate-100 flex flex-wrap items-center gap-1.5">
+            <span class="text-xs font-mono font-bold text-slate-400 uppercase mr-1">TECH STACK:</span>
+            ${activeProject.techStack.map(t => `
+              <span class="px-2.5 py-1 rounded-lg text-xs font-mono font-semibold bg-slate-900 text-white">
+                ${t}
+              </span>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    function focusS2Project(idx) {
+      s2ActiveIdx = idx;
+      renderSolution2();
+    }
+
+    // =========================================================================
+    // 渲染方案 3：全宽交互式折叠风琴墙 (Interactive Accordion Wall)
+    // =========================================================================
+    function renderSolution3() {
+      const container = document.getElementById('s3AccordionContainer');
+
+      container.innerHTML = PROJECTS.map((p, idx) => {
+        const isExpanded = s3ActiveIdx === idx;
+        return `
+          <div 
+            onclick="focusS3Project(${idx})"
+            style="flex: ${isExpanded ? '5.5' : '1'};"
+            class="rounded-2xl border transition-all duration-500 overflow-hidden flex cursor-pointer relative ${
+              isExpanded 
+                ? 'bg-white border-cyan-400 shadow-lg p-6 flex-col justify-between' 
+                : 'bg-slate-50/80 hover:bg-cyan-50/40 border-slate-200 flex-col items-center justify-between py-6 px-2'
+            }"
+          >
+            ${isExpanded ? `
+              <!-- 展开态完整展板 -->
+              <div class="space-y-4 smooth-transition">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-100 text-xs font-mono">
+                  <div class="flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-cyan-600"></span>
+                    <span class="font-black text-slate-900">STAGE // ${p.code}</span>
+                    <span class="text-cyan-700 bg-cyan-50 border border-cyan-200 px-2 py-0.5 rounded-full font-bold">
+                      ${p.timelineBadge[currentLang]}
+                    </span>
+                  </div>
+                  <span class="text-cyan-800 font-extrabold bg-slate-100 px-2 py-0.5 rounded">
+                    ${p.period[currentLang]}
+                  </span>
+                </div>
+
+                <div>
+                  <h2 class="text-lg sm:text-xl font-black text-slate-950 leading-snug">
+                    ${p.title[currentLang]}
+                  </h2>
+                  <p class="text-xs font-mono text-slate-500 mt-1">
+                    ${p.company[currentLang]} · ${p.role[currentLang]}
+                  </p>
+                </div>
+
+                <div class="p-3 rounded-xl bg-cyan-50/70 border border-cyan-200/70 text-cyan-950 text-xs leading-relaxed">
+                  ${p.slogan[currentLang]}
+                </div>
+
+                <!-- 指标卡片 -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  ${p.metrics.map(m => `
+                    <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
+                      <div class="text-xl font-black font-mono text-cyan-700">${getVal(m.val)}</div>
+                      <div class="text-[10px] font-mono font-bold text-slate-800 uppercase mt-0.5">${m.lbl[currentLang]}</div>
+                    </div>
+                  `).join('')}
+                </div>
+
+                <!-- 技术攻坚拆解 -->
+                <div class="space-y-1.5">
+                  ${p.deepChapters.slice(0, 1).map(ch => `
+                    <div class="p-2.5 rounded-xl bg-slate-50/80 border border-slate-200 text-xs">
+                      <span class="font-bold text-slate-900 font-mono block mb-1">攻坚重点：${ch.title[currentLang]}</span>
+                      <p class="text-slate-600 text-[11px] leading-relaxed">${ch.desc[currentLang]}</p>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+
+              <!-- 底部技术栈 -->
+              <div class="pt-3 border-t border-slate-100 flex flex-wrap gap-1 items-center">
+                ${p.techStack.map(t => `
+                  <span class="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-slate-900 text-white">${t}</span>
+                `).join('')}
+              </div>
+            ` : `
+              <!-- 折叠态坚排标签 -->
+              <div class="w-6 h-6 rounded-full bg-slate-200 group-hover:bg-cyan-500 text-slate-600 flex items-center justify-center text-[10px] font-mono font-bold">
+                ${p.code}
+              </div>
+
+              <div class="writing-vertical text-center space-y-4 my-auto">
+                <span class="text-xs font-mono font-black tracking-widest text-slate-800">
+                  ${p.period[currentLang]}
+                </span>
+                <span class="text-[11px] font-bold text-slate-600">
+                  ${p.company[currentLang]}
+                </span>
+              </div>
+
+              <div class="text-[10px] font-mono text-cyan-700 bg-cyan-50 px-1.5 py-0.5 rounded font-bold uppercase">
+                ${p.timelineBadge[currentLang]}
+              </div>
+            `}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function focusS3Project(idx) {
+      s3ActiveIdx = idx;
+      renderSolution3();
+    }
+
+    // 全量刷新
+    function renderAll() {
+      if (currentSolution === 1) renderSolution1();
+      else if (currentSolution === 2) renderSolution2();
+      else if (currentSolution === 3) renderSolution3();
+    }
+
+    // 初始化运行
+    renderAll();
+  </script>
+</body>
+</html>
