@@ -4,6 +4,21 @@ import * as THREE from 'three';
 import { TIMELINE_PROJECTS, type TimelineProject } from '../data/timelineProjects';
 export type { TimelineProject };
 
+// 最终固化的时空跃迁动力学参数
+const WARP_CONFIG = {
+  stage1Duration: 1650,
+  stage2Duration: 1800,
+  stage3Duration: 600,
+  stage1Dist: 32,
+  stage2Dist: 420,
+  stage2EndSpeed: 600,
+  stage3Dist: 500,
+  maxFov: 70,
+  burstFov: 92,
+  stage2FlowSpeed: 8,
+  stage3FlowSpeed: 18,
+};
+
 // ================= 着色器源码 =================
 const beamVertexShader = `
   varying vec2 vUv;
@@ -101,7 +116,7 @@ const beamFragmentShader = `
     col = mix(col, colAmber, smoothstep(0.42, 0.88, energy));
     col = mix(col, colCore, clamp(coreEnergy * 0.84, 0.0, 0.90));
 
-    float endFade = smoothstep(1000.0, 750.0, abs(vLocalX));
+    float endFade = smoothstep(3000.0, 2600.0, abs(vLocalX));
     float alpha = (energy * 0.50 + coreEnergy * 0.46) * edgeCutoff * endFade * drawMask;
     float layerWeight = 0.69;
 
@@ -185,7 +200,7 @@ const fogFragmentShader = `
     vec3 col = mix(uColorOuter, uColorMid, smoothstep(0.10, 0.55, totalMist));
     col = mix(col, uColorInner, smoothstep(0.38, 0.88, totalMist) * (1.0 - d * 0.55));
 
-    float endFade = smoothstep(1000.0, 750.0, abs(vLocalX));
+    float endFade = smoothstep(3000.0, 2600.0, abs(vLocalX));
     float alpha = clamp(totalMist * 0.825, 0.0, 0.95) * endFade * drawMask;
     gl_FragColor = vec4(col * alpha * 1.5, alpha);
   }
@@ -203,7 +218,7 @@ const emberVertexShader = `
     float speed = aData.z;
     float seed = aData.w;
 
-    float flowX = mod(pos.x + uTime * speed * 4.2 + 1000.0, 2000.0) - 1000.0;
+    float flowX = mod(pos.x + uTime * speed * 4.2 + 3000.0, 6000.0) - 3000.0;
     pos.x = flowX;
     pos.y += sin(uTime * 0.8 + seed) * 0.8;
     pos.z += cos(uTime * 0.6 + seed * 1.2) * 0.6;
@@ -215,7 +230,7 @@ const emberVertexShader = `
     gl_PointSize = sizeBase * (240.0 / -mvPosition.z);
 
     float drawMask = uDrawHeadX > 160.0 ? 1.0 : (1.0 - smoothstep(uDrawHeadX - 10.0, uDrawHeadX + 5.0, pos.x));
-    float endFade = smoothstep(1000.0, 750.0, abs(flowX));
+    float endFade = smoothstep(3000.0, 2600.0, abs(flowX));
     float flicker = sin(uTime * (2.2 + fract(seed * 7.3) * 3.0) + seed) * 0.40 + 0.60;
     float edgeFade = smoothstep(11.0, 1.5, abs(pos.y));
     vAlpha = flicker * edgeFade * endFade * drawMask;
@@ -269,7 +284,7 @@ const helixVertexShader = `
 
     float packetOffset = mod(worldX - uTime * uSpeed * 30.0 + uPhase * 90.0, 260.0) - 130.0;
     float spatialEnvelope = smoothstep(60.0, 10.0, abs(packetOffset));
-    float endFade = smoothstep(1000.0, 750.0, abs(pos.x));
+    float endFade = smoothstep(3000.0, 2600.0, abs(pos.x));
     float drawMask = uDrawHeadX > 160.0 ? 1.0 : (1.0 - smoothstep(uDrawHeadX - 15.0, uDrawHeadX + 10.0, worldX));
 
     float emergence = spatialEnvelope * temporalLife * endFade * drawMask;
@@ -476,6 +491,7 @@ export const Timeline3DExperience: React.FC<Timeline3DExperienceProps> = ({
   const isWarpingRef = useRef(false);
   const readyForWarpRef = useRef(false);
   const warpCooldownUntilRef = useRef(0);
+  const isWhiteoutHoldingRef = useRef(false);
 
   const isActiveRef = useRef(isActive);
   useEffect(() => {
@@ -484,6 +500,7 @@ export const Timeline3DExperience: React.FC<Timeline3DExperienceProps> = ({
       // 离开当前模块时，彻底复位内部白光与状态锁，确保下次回退进入时不白屏、不卡死！
       isWarpingRef.current = false;
       readyForWarpRef.current = false;
+      isWhiteoutHoldingRef.current = false;
       setWarpProgress(0);
       targetDistanceRef.current = 70;
       targetOrbitThetaRef.current = 1.030;
@@ -601,24 +618,37 @@ export const Timeline3DExperience: React.FC<Timeline3DExperienceProps> = ({
     }
   }, [toggleHUD]);
 
-  // 启动时空穿越动效：1s温和旋转扭正平移 -> 1s逐渐加速 -> 0.5s最终冲刺变白
+  // 启动时空穿越动效：温和旋转扭正平移 -> 逐渐加速 -> 最终冲刺变白
   const startWarpOut = useCallback(() => {
     if (isWarpingRef.current) return;
     isWarpingRef.current = true;
+    isWhiteoutHoldingRef.current = false;
 
-    const curX = currentCamPosRef.current.x;
-    const curY = currentCamPosRef.current.y;
-    const curZ = currentCamPosRef.current.z;
-    const startLookAtX = currentTrackingXRef.current + (isHudCollapsedRef.current ? 0 : 8);
+    // 无论当前用户在哪个战役或从调速器点击，跃迁均严格从最后一个战役节点 (06，潮玩秒杀交易中枢) 起步
+    const lastIdx = TIMELINE_PROJECTS.length - 1;
+    const lastNodeX = TIMELINE_PROJECTS[lastIdx].xPos;
+    currentIdxRef.current = lastIdx;
+    setCurrentIdx(lastIdx);
+    currentTrackingXRef.current = lastNodeX;
+
+    // 计算最后一个节点对应的常态标准观察机位 (与常态交互一致)
+    const offsetDist = isHudCollapsedRef.current ? 0 : -18;
+    const camCenterX = lastNodeX + offsetDist;
+    const standardCamX = camCenterX + distanceRef.current * Math.sin(orbitThetaRef.current) * Math.cos(orbitPhiRef.current);
+    const standardCamY = 4.5 + distanceRef.current * Math.sin(orbitPhiRef.current);
+    const standardCamZ = distanceRef.current * Math.cos(orbitThetaRef.current) * Math.cos(orbitPhiRef.current);
+
+    // 起始镜头朝向锁定在最后一个节点中央
+    const startLookAtX = lastNodeX + (isHudCollapsedRef.current ? 0 : 8);
     const startLookAtY = 1.2;
     const startLookAtZ = 0.0;
 
     warpAnimRef.current = {
       active: true,
       startTime: performance.now(),
-      startCamX: curX,
-      startCamY: curY,
-      startCamZ: curZ,
+      startCamX: standardCamX,
+      startCamY: standardCamY,
+      startCamZ: standardCamZ,
       startLookAtX,
       startLookAtY,
       startLookAtZ,
@@ -650,14 +680,14 @@ export const Timeline3DExperience: React.FC<Timeline3DExperienceProps> = ({
     const beamGroup = new THREE.Group();
     scene.add(beamGroup);
 
-    const BEAM_LENGTH = 2000;
+    const BEAM_LENGTH = 6000;
     const BEAM_HEIGHT = 12;
     const beamUniforms: { [key: string]: { value: any } }[] = [];
     const numLayers = 3;
     const beamZOffsets = [-1.8, 0.0, 1.8];
 
     for (let i = 0; i < numLayers; i++) {
-      const geo = new THREE.PlaneGeometry(BEAM_LENGTH, BEAM_HEIGHT, 320, 12);
+      const geo = new THREE.PlaneGeometry(BEAM_LENGTH, BEAM_HEIGHT, 800, 12);
       const uvAttr = geo.attributes.uv;
       for (let j = 0; j < uvAttr.count; j++) {
         const u = uvAttr.getX(j);
@@ -696,7 +726,7 @@ export const Timeline3DExperience: React.FC<Timeline3DExperienceProps> = ({
     // 2. 包裹光雾
     const fogGroup = new THREE.Group();
     scene.add(fogGroup);
-    const FOG_LENGTH = 2000;
+    const FOG_LENGTH = 6000;
     const FOG_HEIGHT = 23;
     const fogUniforms: { [key: string]: { value: any } }[] = [];
     const numFogLayers = 2;
@@ -704,7 +734,7 @@ export const Timeline3DExperience: React.FC<Timeline3DExperienceProps> = ({
     const fogRotX = [0.10, -0.10];
 
     for (let i = 0; i < numFogLayers; i++) {
-      const geo = new THREE.PlaneGeometry(FOG_LENGTH, FOG_HEIGHT, 320, 12);
+      const geo = new THREE.PlaneGeometry(FOG_LENGTH, FOG_HEIGHT, 800, 12);
       const uvAttr = geo.attributes.uv;
       for (let j = 0; j < uvAttr.count; j++) {
         const u = uvAttr.getX(j);
@@ -742,13 +772,13 @@ export const Timeline3DExperience: React.FC<Timeline3DExperienceProps> = ({
     fogUniformsRef.current = fogUniforms;
 
     // 3. 火星余烬微粒系统
-    const EMBER_COUNT = 1800;
+    const EMBER_COUNT = 2400;
     const emberGeo = new THREE.BufferGeometry();
     const emberPositions = new Float32Array(EMBER_COUNT * 3);
     const emberData = new Float32Array(EMBER_COUNT * 4);
 
     for (let i = 0; i < EMBER_COUNT; i++) {
-      const x = (Math.random() - 0.5) * 2000;
+      const x = (Math.random() - 0.5) * 6000;
       const spread = (Math.random() - 0.5) * (Math.random() - 0.5) * 4.0;
       const y = spread * 11.0;
       const z = (Math.random() - 0.5) * 10.0;
@@ -784,7 +814,7 @@ export const Timeline3DExperience: React.FC<Timeline3DExperienceProps> = ({
     // 4. 空间螺旋流光线
     const helixGroup = new THREE.Group();
     scene.add(helixGroup);
-    const helixRibbonGeo = createRibbonGeometry(2000, 600);
+    const helixRibbonGeo = createRibbonGeometry(6000, 1200);
     const helixUniformsList: { [key: string]: { value: any } }[] = [];
 
     const helixConfigs = [
@@ -1106,41 +1136,52 @@ export const Timeline3DExperience: React.FC<Timeline3DExperienceProps> = ({
     window.addEventListener('resize', handleResize);
 
     // 渲染主循环
-    const animStartTime = performance.now();
-    let currentTrackingX = TIMELINE_PROJECTS[0].xPos;
     let animId = 0;
+    let lastFrameTime = performance.now();
+    let accumulatedFlowTime = 0;
 
     const animate = () => {
       animId = requestAnimationFrame(animate);
 
       // 功耗与性能保护：未激活或时间线未绘制时暂停高负载 3D 渲染，彻底消除电脑发热与电量消耗！
       if (!isActiveRef.current || drawProgressRef.current < 0.001) {
+        lastFrameTime = performance.now();
         return;
       }
 
       const now = performance.now();
-      const elapsed = (now - animStartTime) * 0.001;
+      const deltaSec = Math.min(0.1, (now - lastFrameTime) * 0.001);
+      lastFrameTime = now;
+      const elapsed = accumulatedFlowTime;
+
+      const tStage1 = WARP_CONFIG.stage1Duration;
+      const tStage2 = WARP_CONFIG.stage2Duration;
+      const tStage3 = WARP_CONFIG.stage3Duration;
+      const tTotal = tStage1 + tStage2 + tStage3;
 
       // 1. 流光粒子 Uniforms 更新（在跃迁全周期平滑加速）
       let flowSpeedMultiplier = 1.0;
       if (warpAnimRef.current.active) {
         const elapsedWarp = performance.now() - warpAnimRef.current.startTime;
-        if (elapsedWarp < 1000) {
-          // 阶段 1 (0 ~ 1.0s)：初始温和，保持原速并平缓渐升至 1.2
-          const t1 = elapsedWarp / 1000;
-          flowSpeedMultiplier = 1.0 + (t1 * t1) * 0.2;
-        } else if (elapsedWarp < 2000) {
-          // 阶段 2 (1.0 ~ 2.0s)：顺着时间线逐渐加速，流速由 1.2 平滑递增至 6.0
-          const t2 = (elapsedWarp - 1000) / 1000;
-          const accel = t2 * 0.3 + (t2 * t2) * 0.7;
-          flowSpeedMultiplier = 1.2 + accel * 4.8;
+        if (elapsedWarp < tStage1) {
+          // 阶段 1：保持原速（完全不加速，绝对平静）
+          const t1 = elapsedWarp / tStage1;
+          flowSpeedMultiplier = 1.0 + (t1 * t1) * 0.1;
+        } else if (elapsedWarp < tStage1 + tStage2) {
+          // 阶段 2：中段强劲加速
+          const tau = (elapsedWarp - tStage1) / tStage2;
+          const accel = tau * 0.4 + (tau * tau) * 0.6;
+          flowSpeedMultiplier = 1.1 + accel * (WARP_CONFIG.stage2FlowSpeed - 1.1);
         } else {
-          // 阶段 3 (2.0 ~ 2.5s)：最终冲刺，流速狂飙至 16.0
-          const t3 = Math.min(1.0, (elapsedWarp - 2000) / 500);
-          flowSpeedMultiplier = 6.0 + Math.pow(t3, 2.0) * 10.0;
+          // 阶段 3：冲刺极限
+          const u = Math.min(1.0, (elapsedWarp - (tStage1 + tStage2)) / tStage3);
+          flowSpeedMultiplier = WARP_CONFIG.stage2FlowSpeed + Math.pow(u, 2.0) * (WARP_CONFIG.stage3FlowSpeed - WARP_CONFIG.stage2FlowSpeed);
         }
       }
-      const flowTime = elapsed * flowSpeedMultiplier;
+
+      // 关键物理修复：严格累加实际流光微元时间，彻底消除时间暴涨导致几百倍流速假象！
+      accumulatedFlowTime += deltaSec * flowSpeedMultiplier;
+      const flowTime = accumulatedFlowTime;
       const currentHeadX = drawHeadXRef.current;
 
       beamUniformsRef.current.forEach(u => {
@@ -1189,8 +1230,6 @@ export const Timeline3DExperience: React.FC<Timeline3DExperienceProps> = ({
       });
 
       // 3. 更新相机轨迹与聚焦
-      currentTrackingXRef.current = currentTrackingX;
-
       if (warpAnimRef.current.active) {
         const elapsedWarp = performance.now() - warpAnimRef.current.startTime;
         const { startCamX, startCamY, startCamZ, startLookAtX, startLookAtY, startLookAtZ } = warpAnimRef.current;
@@ -1203,25 +1242,28 @@ export const Timeline3DExperience: React.FC<Timeline3DExperienceProps> = ({
         let lookAtZ: number;
         let curFov = 45.0;
 
-        if (elapsedWarp < 1000) {
+        // 阶段 1 末瞬时速度 v1 (单位/秒)
+        const v1 = tStage1 > 0 ? (2.0 * WARP_CONFIG.stage1Dist) / (tStage1 / 1000) : 0;
+
+        if (elapsedWarp < tStage1) {
           // =========================================================================
-          // 阶段 1 (0.0s ~ 1.0s，耗时 1.0 秒)：镜头旋转扭正与平滑移入伴飞位，初速度平顺为 0
+          // 阶段 1 (0.0s ~ tStage1)：纯原地旋转扭正镜头，柔和对齐正前方伴飞轨道
           // =========================================================================
-          const t1 = Math.min(1.0, elapsedWarp / 1000);
+          const t1 = Math.min(1.0, elapsedWarp / tStage1);
           // 五次平滑曲线 (Quintic Smoothstep)，保证旋转对齐极度柔顺无顿挫
           const w1 = t1 * t1 * t1 * (t1 * (t1 * 6.0 - 15.0) + 10.0);
 
-          // 前向位移：初速度严格为 0，1 秒内前向仅平缓滑行 10 个单位（消除任何前冲与顿挫感）
-          camX = startCamX + 10.0 * (t1 * t1);
-          // 高度平滑过渡至伴飞高度 4.8
-          camY = startCamY + (4.8 - startCamY) * w1;
-          // 平滑过渡至右侧伴飞轨道 (Z = 8.0)，视线斜切避开中空缝隙
-          camZ = startCamZ + (8.0 - startCamZ) * w1;
+          // X 轴位移严格受控于 stage1Dist
+          camX = startCamX + WARP_CONFIG.stage1Dist * (t1 * t1);
+          // Y、Z 轴在阶段1纯自转，完全不向光带扑面
+          camY = startCamY;
+          camZ = startCamZ;
 
-          // 视线平滑从当前聚焦目标平缓扭正至正前方航道
-          const targetLookAtX = camX + 60.0;
-          const targetLookAtY = 1.2;
-          const targetLookAtZ = 0.5;
+          // 关键修复：阶段1对齐目标与阶段2飞行航向严格平行（朝向正前方 +X，注视点 Z 与相机当前 Z 保持一致）
+          // 彻底消除原本 targetLookAtZ=0.5 导致的 ~25° 斜切视角与阶段2突变断层！
+          const targetLookAtX = camX + 160.0;
+          const targetLookAtY = 2.4;
+          const targetLookAtZ = camZ; // 视线与伴飞航向平行
 
           lookAtX = startLookAtX + (targetLookAtX - startLookAtX) * w1;
           lookAtY = startLookAtY + (targetLookAtY - startLookAtY) * w1;
@@ -1230,50 +1272,64 @@ export const Timeline3DExperience: React.FC<Timeline3DExperienceProps> = ({
           curFov = 45.0;
           setWarpProgress(0);
 
-        } else if (elapsedWarp < 2000) {
+        } else if (elapsedWarp < tStage1 + tStage2) {
           // =========================================================================
-          // 阶段 2 (1.0s ~ 2.0s，耗时 1.0 秒)：顺着时间线逐渐加速，推背感平滑攀升
+          // 阶段 2 (tStage1 ~ tStage1 + tStage2)：中段平滑加速，伴随推背感顺势切入近景伴飞轨道
           // =========================================================================
-          const tau = (elapsedWarp - 1000) / 1000;
-          // 前向位移二阶递增：衔接阶段 1 末速度 20.0，并在 1 秒内平滑加速至 280.0
-          // d(forwardDist)/d(tau) 在 tau=0 时为 20.0，在 tau=1 时为 280.0
-          const forwardDist = 10.0 + (20.0 * tau + 10.0 * tau * tau + 80.0 * tau * tau * tau);
+          const tau = (elapsedWarp - tStage1) / tStage2;
+          const T2 = tStage2 / 1000;
+          const v2 = WARP_CONFIG.stage2EndSpeed;
+          const D2 = WARP_CONFIG.stage2Dist;
+
+          // 二次速度曲线参数求解，确保初速度=v1，末速度=v2，积分位移=D2
+          const deltaV = v2 - v1;
+          const targetMeanV = D2 / T2;
+          const b = 6.0 * (targetMeanV - v1 - deltaV * 0.5);
+          const a = deltaV - b;
+
+          const forwardInStage2 = T2 * (v1 * tau + 0.5 * a * tau * tau + (b / 3.0) * tau * tau * tau);
+          const forwardDist = WARP_CONFIG.stage1Dist + forwardInStage2;
           camX = startCamX + forwardDist;
 
-          // 贴地平稳伴飞 (高度从 4.8 微降至 3.8，Z 轴维持在 8.0 ~ 7.2 偏右伴飞)
-          camY = 4.8 - tau * 1.0;
-          camZ = 8.0 - tau * 0.8;
+          // 相机从原位侧方机位平滑滑入近景伴飞轨道 (Y -> 3.6, Z -> 7.8)
+          // 采用平滑 step 曲线，消减加速度突跳
+          const sTau = tau * tau * (3.0 - 2.0 * tau);
+          camY = startCamY + (3.6 - startCamY) * sTau;
+          camZ = startCamZ + (7.8 - startCamZ) * sTau;
 
-          lookAtX = camX + 120.0;
-          lookAtY = 1.2;
-          lookAtZ = 0.5;
+          // 注视点始终紧锁在前方 200 单位处，视线与轨道轴向完美吻合
+          lookAtX = camX + 200.0;
+          lookAtY = 2.0;
+          lookAtZ = camZ;
 
-          // 动态广角平滑拉伸：FOV 从 45.0° 逐渐扩展至 65.0°
-          curFov = 45.0 + tau * 20.0;
+          curFov = 45.0 + (tau * 0.3 + tau * tau * 0.7) * (WARP_CONFIG.maxFov - 45.0);
           setWarpProgress(0);
 
         } else {
           // =========================================================================
-          // 阶段 3 (2.0s ~ 2.5s，耗时 0.5 秒)：最终冲刺，突破超速然后变白
+          // 阶段 3 (最终冲刺与突破超速)
           // =========================================================================
-          const u = Math.min(1.0, (elapsedWarp - 2000) / 500);
-          // 阶段 2 累计位移 120.0，阶段 2 末速度 280.0
-          // 阶段 3 位移在 0.5 秒内极速爆发：衔接初速度 280.0 并暴冲至超光速
-          const forwardDist = 120.0 + (140.0 * u + 120.0 * u * u + 40.0 * u * u * u);
+          const u = Math.min(1.0, (elapsedWarp - (tStage1 + tStage2)) / tStage3);
+          const T3 = tStage3 / 1000;
+          const v2 = WARP_CONFIG.stage2EndSpeed;
+          const D3 = WARP_CONFIG.stage3Dist;
+
+          // 阶段 3 初速度 v2，总位移 D3
+          const c = 2.0 * (D3 / T3 - v2);
+          const forwardInStage3 = T3 * (v2 * u + 0.5 * c * u * u);
+          const forwardDist = WARP_CONFIG.stage1Dist + WARP_CONFIG.stage2Dist + Math.max(0, forwardInStage3);
           camX = startCamX + forwardDist;
 
-          camY = 3.8 - u * 0.3;
-          camZ = 7.2 - u * 0.2;
+          camY = 3.6 - u * 0.2;
+          camZ = 7.8 - u * 0.6;
 
-          lookAtX = camX + 200.0;
-          lookAtY = 1.2;
-          lookAtZ = 0.5;
+          lookAtX = camX + 320.0;
+          lookAtY = 1.6;
+          lookAtZ = camZ;
 
-          // 极限 FOV 爆发拉伸：从 65.0° 暴增至 90.0°
-          curFov = 65.0 + u * 25.0;
+          curFov = WARP_CONFIG.maxFov + Math.pow(u, 1.8) * (WARP_CONFIG.burstFov - WARP_CONFIG.maxFov);
 
-          // 全屏耀斑过载：最后 0.5 秒内变纯白
-          const whiteP = Math.pow(u, 1.4);
+          const whiteP = Math.pow(u, 1.3);
           setWarpProgress(whiteP);
         }
 
@@ -1285,14 +1341,18 @@ export const Timeline3DExperience: React.FC<Timeline3DExperienceProps> = ({
 
         currentCamPosRef.current = { x: camX, y: camY, z: camZ };
 
-        if (elapsedWarp >= 2500) {
+        if (elapsedWarp >= tTotal) {
+          // 画面完全变白：立即锁定白光与相机终点视角，严禁在此帧退回常态视角导致闪烁！
           setWarpProgress(1.0);
           warpAnimRef.current.active = false;
-          onWarpCompleteRef.current?.();
+          isWhiteoutHoldingRef.current = true;
 
+          // 调用真实切页回调，在白光遮挡下平稳交接至后续精选作品模块
+          onWarpCompleteRef.current?.();
           setTimeout(() => {
             isWarpingRef.current = false;
             readyForWarpRef.current = false;
+            isWhiteoutHoldingRef.current = false;
             setWarpProgress(0);
             targetDistanceRef.current = 70;
             targetOrbitThetaRef.current = 1.030;
@@ -1306,17 +1366,21 @@ export const Timeline3DExperience: React.FC<Timeline3DExperienceProps> = ({
             }
           }, 300);
         }
+      } else if (isWhiteoutHoldingRef.current) {
+        // 白光锁定状态：相机持续保持在最终冲刺的高速机位，等待白屏复位或切页，绝对杜绝闪回！
+        // 这一帧什么都不动，保持上一帧渲染姿态
       } else {
-        // 常规交互与浏览聚焦摄像机
+        // 常规交互与浏览聚焦摄像机：相机平滑跟随当前选中的里程碑节点 targetX
         const targetX = TIMELINE_PROJECTS[currentIdxRef.current].xPos;
-        currentTrackingX += (targetX - currentTrackingX) * 0.08;
+        currentTrackingXRef.current += (targetX - currentTrackingXRef.current) * 0.08;
+        const curTrackingX = currentTrackingXRef.current;
 
         orbitThetaRef.current += (targetOrbitThetaRef.current - orbitThetaRef.current) * 0.08;
         orbitPhiRef.current += (targetOrbitPhiRef.current - orbitPhiRef.current) * 0.08;
         distanceRef.current += (targetDistanceRef.current - distanceRef.current) * 0.08;
 
         const offsetDist = isHudCollapsedRef.current ? 0 : -18;
-        const camCenterX = currentTrackingX + offsetDist;
+        const camCenterX = curTrackingX + offsetDist;
 
         const camX = camCenterX + distanceRef.current * Math.sin(orbitThetaRef.current) * Math.cos(orbitPhiRef.current);
         const camY = 4.5 + distanceRef.current * Math.sin(orbitPhiRef.current) + Math.sin(elapsed * 0.3) * 0.25;
@@ -1328,7 +1392,7 @@ export const Timeline3DExperience: React.FC<Timeline3DExperienceProps> = ({
         }
 
         camera.position.set(camX, camY, camZ);
-        camera.lookAt(currentTrackingX + (isHudCollapsedRef.current ? 0 : 8), 1.2, 0);
+        camera.lookAt(curTrackingX + (isHudCollapsedRef.current ? 0 : 8), 1.2, 0);
 
         currentCamPosRef.current = { x: camX, y: camY, z: camZ };
       }
@@ -1569,12 +1633,15 @@ export const Timeline3DExperience: React.FC<Timeline3DExperienceProps> = ({
 
       {/* 4. 时空穿越全屏白光覆盖层 (Whiteout) */}
       <div
-        className="pointer-events-none absolute inset-0 w-full h-full z-50 bg-white transition-opacity duration-75"
+        className={`pointer-events-none absolute inset-0 w-full h-full z-50 bg-white will-change-[opacity] ${
+          warpProgress === 0 ? 'transition-opacity duration-300' : ''
+        }`}
         style={{
           opacity: warpProgress,
           mixBlendMode: 'normal'
         }}
       />
+
     </div>
   );
 };
